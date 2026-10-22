@@ -73,6 +73,26 @@ button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 .zoom{position:fixed;inset:0;z-index:20;background:rgba(10,14,18,.92);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 .zoom img{background:#fff;max-width:none;width:min(1400px,190vw);border-radius:6px}
 .zoom .x{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));font:inherit;font-size:1.4rem;background:#fff;color:#111;border:0;border-radius:999px;width:44px;height:44px;cursor:pointer}
+
+.audio-btn{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--signal);background:transparent;color:var(--signal);padding:8px 12px;font-size:.9rem;font-weight:700}
+.audio{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column;gap:16px;padding-top:max(18px,env(safe-area-inset-top,0px));padding-bottom:max(18px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:auto}
+.audio .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.audio h2{font-family:var(--display);font-size:1.05rem;margin:0}
+.audio .close{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 12px;cursor:pointer}
+.audio .warn{font-size:.88rem;color:var(--muted);border-left:3px solid var(--signal);padding-left:10px;max-width:60ch}
+.audio .now{flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;min-height:200px}
+.audio .phase{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--signal);font-weight:700}
+.audio .text{font-family:var(--display);font-weight:500;font-size:clamp(1.2rem,5vw,1.8rem);line-height:1.3;text-wrap:balance;overflow-wrap:anywhere}
+.audio .count{font-family:var(--mono);color:var(--muted);font-size:.9rem}
+.audio .big{font:inherit;font-family:var(--display);font-size:1.3rem;font-weight:700;border:0;border-radius:16px;padding:22px;cursor:pointer;background:var(--signal);color:var(--signal-ink);width:100%}
+.audio .big.paused{background:var(--ok)}
+.audio .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.audio .row button{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:14px;cursor:pointer}
+.audio .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;font-size:.9rem}
+.audio label{display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+.audio select{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.audio .chk{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.audio .err{color:var(--signal);font-weight:700}
 @media (max-width:460px){.pult{grid-template-columns:1fr 1fr}.pult .nav{order:3}.keys{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .card.flip{animation:fl .22s ease}
@@ -100,10 +120,30 @@ button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
     <button id="shuffle" aria-pressed="false">Перемешать</button>
     <button id="onlyAgain" aria-pressed="false">Только «повторить» и новые</button>
     <button id="reverse" aria-pressed="false">Сначала ответ</button>
+    <button class="audio-btn" id="audioOpen">Слушать (аудиорежим)</button>
     <span class="sp"></span>
     <button id="reset">Сбросить отметки</button>
   </div>
   <div class="keys"><kbd>Пробел</kbd> перевернуть · <kbd>←</kbd> <kbd>→</kbd> листать · <kbd>1</kbd> повторить · <kbd>2</kbd> знаю</div>
+</div>
+
+<div class="audio" id="audio" hidden role="dialog" aria-label="Аудиорежим">
+  <div class="top"><h2>Аудиорежим · <span id="aDeck"></span></h2><button class="close" id="aClose">Закрыть</button></div>
+  <p class="warn">Выбери модуль и нажми «Начать» до того, как тронешься. За рулём только слушай: на экран не смотри и ничего не нажимай. Остановиться можно кнопкой на руле или наушниках, если телефон это поддерживает, либо уже на стоянке.</p>
+  <div class="now" aria-live="polite">
+    <div class="phase" id="aPhase">Готов</div>
+    <div class="text" id="aText">Телефон прочитает вопрос, сделает паузу, чтобы ты ответил про себя, потом прочитает ответ и перейдёт к следующей карточке.</div>
+    <div class="count" id="aCount"></div>
+    <div class="err" id="aErr" hidden></div>
+  </div>
+  <button class="big" id="aPlay">Начать</button>
+  <div class="row"><button id="aPrev">Предыдущий</button><button id="aNext">Следующий</button></div>
+  <div class="opts">
+    <label for="aPause">Пауза на ответ<select id="aPause"><option value="3">3 секунды</option><option value="6" selected>6 секунд</option><option value="10">10 секунд</option><option value="15">15 секунд</option></select></label>
+    <label for="aRate">Скорость речи<select id="aRate"><option value="0.85">медленно</option><option value="1" selected>обычно</option><option value="1.15">быстрее</option><option value="1.3">быстро</option></select></label>
+    <label for="aVoice">Голос<select id="aVoice"></select></label>
+    <label class="chk" for="aRepeat"><input type="checkbox" id="aRepeat"> Повторять ответ дважды</label>
+  </div>
 </div>
 <div class="zoom" id="zoom" hidden><button class="x" id="zx" aria-label="Закрыть">×</button><img id="zimg" alt=""></div>
 <script>
@@ -166,6 +206,7 @@ const closeZoom=()=>{$("zoom").hidden=true;$("card").focus()};
 $("zx").onclick=closeZoom;$("zoom").onclick=e=>{if(e.target.id==="zoom")closeZoom()};
 document.addEventListener("keydown",e=>{
   if(!$("zoom").hidden){if(e.key==="Escape")closeZoom();return}
+  if(!$("audio").hidden){if(e.key==="Escape")$("aClose").click();return}
   if(e.target.tagName==="BUTTON"&&(e.key===" "||e.key==="Enter")&&e.target.id!=="card")return;
   if(e.key===" "||e.key==="Enter"){e.preventDefault();flip()}
   else if(e.key==="ArrowRight")go(1);else if(e.key==="ArrowLeft")go(-1);
@@ -174,6 +215,80 @@ document.addEventListener("keydown",e=>{
 let sx=null;$("card").addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});
 $("card").addEventListener("touchend",e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>60){e.preventDefault();go(dx<0?1:-1)}});
 tabs();build();render();
+
+// ---------- Аудиорежим ----------
+const A={on:false,run:0,lock:null,voices:[]};
+const synth=window.speechSynthesis;
+const RU=[
+ [/кгс\/см²/g," килограмм-сил на квадратный сантиметр"],[/мг\/м³/g," миллиграмм на кубометр"],[/мл\/м³/g," миллилитров на кубометр"],
+ [/дм3\/мин|л\/мин/g," литров в минуту"],[/м3\/час/g," кубометров в час"],[/Н·м/g," ньютон-метров"],[/°\s?[СC]/g," градусов"],
+ [/(\d)\s?МПа/g,"$1 мегапаскаля"],[/МПа/g,"мегапаскаль"],[/(\d)\s?Па(?![А-Яа-яЁёA-Za-z])/g,"$1 паскаль"],[/(\d)\s?мм вод\. ст\./g,"$1 миллиметров водяного столба"],
+ [/(\d)\s?мин(?![А-Яа-яЁёA-Za-z])/g,"$1 минут"],[/(\d)\s?кг(?![А-Яа-яЁёA-Za-z])/g,"$1 килограмм"],[/(\d)\s?км(?![А-Яа-яЁёA-Za-z])/g,"$1 километров"],[/(\d)\s?л(?![А-Яа-яЁёA-Za-z])/g,"$1 литра"],[/(\d)\s?мм(?![А-Яа-яЁёA-Za-z])/g,"$1 миллиметров"],[/(\d)\s?с(?![А-Яа-яЁёA-Za-z])/g,"$1 секунд"],[/(\d)\s?%/g,"$1 процентов"],
+ [/Pmax\.пад/g,"Пэ максимальное падение"],[/Pк\.вых/g,"Пэ контрольное выхода"],[/Pmin\.вкл|Pmin/g,"Пэ минимальное при включении"],
+ [/ΔT/g,"дельта Тэ"],[/Tвых/g,"Тэ выхода"],[/Tобщ/g,"Тэ общее"],[/Tвозвр/g,"Тэ возвращения"],[/Tвкл/g,"Тэ включения"],[/Vб/g,"Вэ баллона"],
+ [/\s\/\s/g," разделить на "],[/\s×\s/g," умножить на "],[/×/g," на "],[/\s=\s/g," равно "],[/\s[−-]\s(?=\d|P|Т|T)/g," минус "],[/\s\+\s/g," плюс "],
+ [/≤/g,"не более "],[/≥/g,"не менее "],[/±/g," плюс-минус "],[/→/g,", затем "],[/…|\.\.\./g," до "],[/№/g,"номер "],[/«|»|"/g,""],
+ [/(?<![А-Яа-яЁёA-Za-z])ЛА(?![А-Яа-яЁёA-Za-z])/g,"лёгочный автомат"],[/(?<![А-Яа-яЁёA-Za-z])ГДЗС(?![А-Яа-яЁёA-Za-z])/g,"гэ-дэ-зэ-эс"],[/(?<![А-Яа-яЁёA-Za-z])РТП(?![А-Яа-яЁёA-Za-z])/g,"эр-тэ-пэ"],[/(?<![А-Яа-яЁёA-Za-z])РЛЧС(?![А-Яа-яЁёA-Za-z])/g,"эр-эл-че-эс"],[/(?<![А-Яа-яЁёA-Za-z])НДС(?![А-Яа-яЁёA-Za-z])/g,"эн-дэ-эс"],[/(?<![А-Яа-яЁёA-Za-z])КПП(?![А-Яа-яЁёA-Za-z])/g,"ка-пэ-пэ"],[/(?<![А-Яа-яЁёA-Za-z])БУ(?![А-Яа-яЁёA-Za-z])/g,"боевой участок"],[/(?<![А-Яа-яЁёA-Za-z])СПР(?![А-Яа-яЁёA-Za-z])/g,"сектор проведения работ"],[/(?<![А-Яа-яЁёA-Za-z])АСР(?![А-Яа-яЁёA-Za-z])/g,"а-эс-эр"],[/(?<![А-Яа-яЁёA-Za-z])АХОВ(?![А-Яа-яЁёA-Za-z])/g,"а-хов"],[/(?<![А-Яа-яЁёA-Za-z])УСк(?![А-Яа-яЁёA-Za-z])/g,"у-эс-ка"],[/(?<![А-Яа-яЁёA-Za-z])УС(?![А-Яа-яЁёA-Za-z])/g,"у-эс"],[/(?<![А-Яа-яЁёA-Za-z])ВЗД(?![А-Яа-яЁёA-Za-z])/g,"время защитного действия"],[/(?<![А-Яа-яЁёA-Za-z])СКАД-1(?![А-Яа-яЁёA-Za-z])/g,"скад один"],[/(?<![А-Яа-яЁёA-Za-z])ВД(?![А-Яа-яЁёA-Za-z])/g,"высокого давления"],[/(?<![А-Яа-яЁёA-Za-z])ТО(?![А-Яа-яЁёA-Za-z])/g,"техобслуживание"],
+ [/CO₂/g,"це-о-два"],[/(?<![А-Яа-яЁёA-Za-z])CO(?![А-Яа-яЁёA-Za-z])/g,"це-о"],[/O₂/g,"кислород"],[/(\d),(\d)/g,"$1 и $2"],[/−(?=\d)/g,"минус "],[/\//g,", "],[/;/g,". "]
+];
+function speakable(t){RU.forEach(([a,b])=>t=t.replace(a,b));return t.replace(/\s+/g," ").trim()}
+function chunks(t){const out=[];t.split(/(?<=[.!?:])\s+/).forEach(p=>{while(p.length>180){let i=p.lastIndexOf(",",180);if(i<60)i=p.lastIndexOf(" ",180);if(i<1)i=180;out.push(p.slice(0,i+1));p=p.slice(i+1).trim()}if(p)out.push(p)});return out}
+function loadVoices(){
+  if(!synth)return;A.voices=synth.getVoices().filter(v=>/^ru/i.test(v.lang));
+  const sel=$("aVoice"),prev=st.voice;
+  sel.innerHTML=A.voices.length?A.voices.map((v,i)=>`<option value="${i}">${esc(v.name)}</option>`).join(""):'<option value="">русский по умолчанию</option>';
+  const i=A.voices.findIndex(v=>v.name===prev);if(i>=0)sel.value=i;
+}
+function say(text,run){
+  return new Promise(res=>{
+    if(run!==A.run)return res(false);
+    const parts=chunks(speakable(text));let k=0;
+    const next=()=>{
+      if(run!==A.run||k>=parts.length)return res(run===A.run);
+      const u=new SpeechSynthesisUtterance(parts[k++]);u.lang="ru-RU";u.rate=+$("aRate").value;
+      const v=A.voices[+$("aVoice").value];if(v)u.voice=v;
+      u.onend=next;u.onerror=next;synth.speak(u);
+    };next();
+  });
+}
+const wait=(ms,run)=>new Promise(r=>{const t0=Date.now();const tick=()=>{if(run!==A.run)return r(false);if(Date.now()-t0>=ms)return r(true);setTimeout(tick,200)};tick()});
+function aShow(phase,text){$("aPhase").textContent=phase;$("aText").textContent=text;$("aCount").textContent=order.length?`карточка ${pos+1} из ${order.length}`:""}
+async function loop(run){
+  while(run===A.run){
+    if(!order.length){aShow("Готово","В этом модуле нет карточек для повторения.");stopAudio();return}
+    const c=deck().cards[order[pos]];
+    flipped=false;render();aShow("Вопрос",c.q);
+    if(!await say("Вопрос. "+c.q,run))return;
+    aShow("Думай",c.q);
+    if(!await wait(+$("aPause").value*1000,run))return;
+    flipped=true;render();aShow("Ответ",c.a);
+    if(!await say("Ответ. "+c.a,run))return;
+    if($("aRepeat").checked){if(!await wait(1200,run))return;if(!await say(c.a,run))return}
+    if(!await wait(1800,run))return;
+    pos=(pos+1)%order.length;
+    if(pos===0){if(!await say("Модуль пройден. Начинаю сначала.",run))return}
+  }
+}
+async function startAudio(){
+  if(!synth){$("aErr").hidden=false;$("aErr").textContent="Этот браузер не умеет читать вслух. Открой страницу в Chrome или Safari.";return}
+  if(deck().id==="figs"){$("aErr").hidden=false;$("aErr").textContent="Модуль «Схемы» состоит из картинок, его нельзя слушать. Закрой окно и выбери другой модуль.";return}
+  $("aErr").hidden=true;A.on=true;const run=++A.run;synth.cancel();
+  $("aPlay").textContent="Пауза";$("aPlay").classList.remove("paused");
+  try{A.lock=await navigator.wakeLock?.request("screen")}catch(e){A.lock=null}
+  loop(run);
+}
+function stopAudio(){A.on=false;A.run++;try{synth&&synth.cancel()}catch(e){}$("aPlay").textContent="Продолжить";$("aPlay").classList.add("paused");try{A.lock&&A.lock.release()}catch(e){}A.lock=null;$("aPhase").textContent="Пауза"}
+function aJump(n){const was=A.on;if(was){A.run++;try{synth.cancel()}catch(e){}}if(order.length)pos=(pos+n+order.length)%order.length;flipped=false;render();if(order.length)aShow("Вопрос",deck().cards[order[pos]].q);if(was)startAudio()}
+$("audioOpen").onclick=()=>{$("audio").hidden=false;$("aDeck").textContent=deck().name;loadVoices();$("aErr").hidden=true;if(order.length)aShow("Готов",deck().cards[order[pos]].q);$("aPlay").focus()};
+$("aClose").onclick=()=>{stopAudio();$("aPlay").textContent="Начать";$("audio").hidden=true;$("card").focus()};
+$("aPlay").onclick=()=>A.on?stopAudio():startAudio();
+$("aPrev").onclick=()=>aJump(-1);$("aNext").onclick=()=>aJump(1);
+["aPause","aRate","aRepeat"].forEach(id=>$(id).onchange=()=>{st[id]=$(id).type==="checkbox"?$(id).checked:$(id).value;save()});
+$("aVoice").onchange=()=>{const v=A.voices[+$("aVoice").value];st.voice=v?v.name:"";save()};
+["aPause","aRate"].forEach(id=>{if(st[id])$(id).value=st[id]});if(st.aRepeat)$("aRepeat").checked=true;
+if(synth){loadVoices();synth.onvoiceschanged=loadVoices}
+document.addEventListener("visibilitychange",async()=>{if(A.on&&document.visibilityState==="visible"&&!A.lock){try{A.lock=await navigator.wakeLock?.request("screen")}catch(e){}}});
+if("mediaSession" in navigator){try{navigator.mediaSession.setActionHandler("pause",()=>A.on&&stopAudio());navigator.mediaSession.setActionHandler("play",()=>!A.on&&!$("audio").hidden&&startAudio());navigator.mediaSession.setActionHandler("nexttrack",()=>aJump(1));navigator.mediaSession.setActionHandler("previoustrack",()=>aJump(-1))}catch(e){}}
 </script>
 
 </body></html>
